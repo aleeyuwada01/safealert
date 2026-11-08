@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- SafeAlert Shield Outline & Fill -->
+  <path d="M32 4L8 14V30C8 46.2 18.2 56.6 32 60C45.8 56.6 56 46.2 56 30V14L32 4Z" fill="#0B2249"/>
+  <path d="M32 8L12 16.5V30C12 43.8 20.4 52.7 32 55.8C43.6 52.7 52 43.8 52 30V16.5L32 8Z" fill="#FFFFFF"/>
+  <!-- Navy S-Curve & Red Bottom-Left Accent -->
+  <path d="M12 31C18 35 28 36 34 42C38 46 37 51 32 55.8C43.6 52.7 52 43.8 52 30V26C44 31 24 27 12 20V31Z" fill="#0B2249"/>
+  <path d="M13.5 36C16.2 44.5 22.8 51.3 31 54.8C29 48.5 22 42 13.5 36Z" fill="#E61919"/>
+  <!-- Red Alert Bell -->
+  <path d="M30 14C28.9 14 28 14.9 28 16V16.6C24.6 17.5 22 20.6 22 24.3V29L19.5 31.5C19 32 19.4 33 20.2 33H39.8C40.6 33 41 32 40.5 31.5L38 29V24.3C38 20.6 35.4 17.5 32 16.6V16C32 14.9 31.1 14 30 14Z" fill="#E61919"/>
+  <path d="M27.5 34.5C27.5 35.9 28.6 37 30 37C31.4 37 32.5 35.9 32.5 34.5H27.5Z" fill="#E61919"/>
+  <!-- Signal Waves -->
+  <path d="M40.5 18.5C42.5 20.5 43.5 23.2 43.5 26" stroke="#E61919" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M44 15.5C47 18.5 48.5 22.2 48.5 26.5" stroke="#E61919" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
+
