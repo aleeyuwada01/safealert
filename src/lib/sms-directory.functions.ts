@@ -6,11 +6,35 @@ import {
   toggleSmsRecipientHandler,
   deleteSmsRecipientHandler,
   dispatchSmartSmsCampaignHandler,
+  saveSmsProviderSettingsHandler,
 } from "./sms-directory.server";
 
 export const getSmsDirectoryState = createServerFn({ method: "GET" }).handler(async () => {
   return getSmsDirectoryStateHandler();
 });
+
+export const saveSmsProviderSettings = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      authMode: z.enum(["api_token", "login_credentials"]),
+      apiToken: z.string().max(400).optional().nullable(),
+      accountEmail: z.string().max(180).optional().nullable(),
+      accountPassword: z.string().max(300).optional().nullable(),
+      defaultSenderId: z.string().min(1).max(11),
+      defaultEnvironment: z.enum(["sandbox", "production"]),
+      defaultGatewayRoute: z.enum([
+        "direct-refund",
+        "corporate",
+        "direct-corporate",
+        "otp",
+        "international",
+      ]),
+      verifyBalance: z.boolean().optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    return saveSmsProviderSettingsHandler(data);
+  });
 
 export const upsertSmsRecipients = createServerFn({ method: "POST" })
   .inputValidator(

@@ -4,7 +4,7 @@ import {
   normalizeNigerianPhone,
   parseBulkPhoneNumbers,
 } from "./telco-compliance";
-import { sendBulkSmsNigeriaV2 } from "./dispatch.server";
+import { checkBulkSmsNigeriaBalanceV2, sendBulkSmsNigeriaV2 } from "./dispatch.server";
 import type { BulkSmsEnvironment, BulkSmsGatewayRoute } from "./bulksms-nigeria";
 
 function getDb() {
@@ -51,9 +51,25 @@ export interface SmsCampaignRow {
   created_at: string;
 }
 
+export interface SmsProviderSettingsRow {
+  id: string;
+  provider_name: string;
+  auth_mode: "api_token" | "login_credentials";
+  api_token: string;
+  account_email: string;
+  account_password: string;
+  default_sender_id: string;
+  default_environment: BulkSmsEnvironment;
+  default_gateway_route: BulkSmsGatewayRoute;
+  webhook_secret: string;
+  last_balance_ngn: number | null;
+  last_verified_at: string | null;
+  updated_at: string;
+}
+
 export async function getSmsDirectoryStateHandler() {
   const db = getDb();
-  const [recipientsRes, campaignsRes, alertsRes] = await Promise.all([
+  const [recipientsRes, campaignsRes, alertsRes, settingsRes] = await Promise.all([
     db.from("sms_recipients").select("*").order("created_at", { ascending: false }),
     db
       .from("sms_broadcast_campaigns")
@@ -65,6 +81,7 @@ export async function getSmsDirectoryStateHandler() {
       .select("id, headline, message, instructions, severity, hazard, status, issued_at")
       .in("status", ["live", "broadcasting"])
       .order("issued_at", { ascending: false }),
+    db.from("sms_provider_settings").select("*").eq("id", "default").maybeSingle(),
   ]);
 
   return {
@@ -80,6 +97,65 @@ export async function getSmsDirectoryStateHandler() {
       status: string;
       issued_at: string;
     }>,
+    providerSettings: (settingsRes.data as SmsProviderSettingsRow | null) ?? null,
+  };
+}
+
+export async function saveSmsProviderSettingsHandler(input: {
+  authMode: "api_token" | "login_credentials";
+  apiToken?: string | null | undefined;
+  accountEmail?: string | null | undefined;
+  accountPassword?: string | null | undefined;
+  defaultSenderId: string;
+  defaultEnvironment: BulkSmsEnvironment;
+  defaultGatewayRoute: BulkSmsGatewayRoute;
+  verifyBalance?: boolean | undefined;
+}) {
+  const db = getDb();
+  const effectiveToken =
+    input.authMode === "api_token"
+      ? (input.apiToken ?? "").trim()
+      : (input.apiToken || input.accountPassword || "").trim();
+
+  let balanceReport = null;
+  if (input.verifyBalance && effectiveToken) {
+    balanceReport = await checkBulkSmsNigeriaBalanceV2({
+      environment: input.defaultEnvironment,
+      apiToken: effectiveToken,
+    });
+  }
+
+  const nowIso = new Date().toISOString();
+  const payload = {
+    id: "default",
+    provider_name: "BulkSMS Nigeria v2",
+    auth_mode: input.authMode,
+    api_token: (input.apiToken ?? "").trim(),
+    account_email: (input.accountEmail ?? "").trim(),
+    account_password: (input.accountPassword ?? "").trim(),
+    default_sender_id: input.defaultSenderId.trim().slice(0, 11) || "SafeAlert",
+    default_environment: input.defaultEnvironment,
+    default_gateway_route: input.defaultGatewayRoute,
+    ...(balanceReport && balanceReport.balance != null
+      ? {
+          last_balance_ngn: balanceReport.balance,
+          last_verified_at: nowIso,
+        }
+      : {}),
+    updated_at: nowIso,
+  };
+
+  const { data, error } = await db
+    .from("sms_provider_settings")
+    .upsert(payload, { onConflict: "id" })
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  return {
+    settings: data as SmsProviderSettingsRow,
+    balanceReport,
   };
 }
 
@@ -188,12 +264,28 @@ export async function dispatchSmartSmsCampaignHandler(input: {
     throw new Error("Select at least one recipient from the directory or enter a phone number.");
   }
 
-  // 3. Dispatch via BulkSMS Nigeria v2
+  // 3. Resolve stored BulkSMS credentials if apiToken not explicitly passed
+  let effectiveToken = input.apiToken?.trim() || "";
+  if (!effectiveToken) {
+    const { data: savedCfg } = await db
+      .from("sms_provider_settings")
+      .select("auth_mode, api_token, account_password")
+      .eq("id", "default")
+      .maybeSingle();
+    if (savedCfg) {
+      effectiveToken =
+        savedCfg.auth_mode === "api_token"
+          ? (savedCfg.api_token || savedCfg.account_password || "").trim()
+          : (savedCfg.api_token || savedCfg.account_password || "").trim();
+    }
+  }
+
+  // 4. Dispatch via BulkSMS Nigeria v2
   const toCsv = targetNumbers.join(",");
   const dispatchResult = await sendBulkSmsNigeriaV2({
     environment: input.environment,
     mode: input.mode,
-    apiToken: input.apiToken ?? null,
+    apiToken: effectiveToken || null,
     from: input.senderId,
     to: toCsv,
     body: finalBody,

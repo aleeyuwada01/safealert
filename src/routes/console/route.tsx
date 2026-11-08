@@ -302,13 +302,31 @@ function ConsoleLayout() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             {clock && (
-              <span className="hidden font-mono text-xs text-muted-foreground sm:inline">
+              <span className="hidden font-mono text-xs text-muted-foreground lg:inline">
                 {clock}
               </span>
             )}
+            {user?.email && (
+              <span className="hidden rounded-lg border border-border bg-surface px-2.5 py-1 font-mono text-[11px] font-medium text-foreground sm:inline-block">
+                {user.email}
+              </span>
+            )}
             <ThemeToggle />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-lg border-destructive/30 font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={async () => {
+                await signOut();
+                navigate({ to: "/auth" });
+              }}
+              title="Log out of Command Console"
+            >
+              <LogOut className="mr-1.5 h-3.5 w-3.5" />
+              Log Out
+            </Button>
           </div>
         </header>
 

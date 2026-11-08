@@ -582,6 +582,7 @@ export async function sendBulkSmsNigeriaV2(input: {
     gateway: input.gateway ?? "direct-refund",
     append_sender: "hosted",
     unicode: Boolean(input.unicode),
+    ...(token ? { api_token: token } : {}),
     ...(input.callbackUrl ? { callback_url: input.callbackUrl.trim() } : {}),
     ...(input.customerReference
       ? { customer_reference: input.customerReference.trim() }
@@ -592,7 +593,12 @@ export async function sendBulkSmsNigeriaV2(input: {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(token
+      ? {
+          Authorization: `Bearer ${token}`,
+          api_token: token,
+        }
+      : {}),
   };
 
   const started = Date.now();
@@ -718,7 +724,12 @@ export async function checkBulkSmsNigeriaBalanceV2(input: {
       method: "GET",
       headers: {
         Accept: "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(token
+          ? {
+              Authorization: `Bearer ${token}`,
+              api_token: token,
+            }
+          : {}),
       },
       signal: AbortSignal.timeout(8000),
     });

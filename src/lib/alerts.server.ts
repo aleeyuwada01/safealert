@@ -403,10 +403,32 @@ export async function testBulkSmsNigeriaHandler(
   const { supabase, userId } = context;
   await assertCanIssue(supabase, userId);
 
+  let effectiveToken = input.apiToken?.trim() || "";
+  if (!effectiveToken) {
+    const { data: savedCfg } = await (supabase as unknown as {
+      from: (t: string) => {
+        select: (c: string) => {
+          eq: (k: string, v: string) => {
+            maybeSingle: () => Promise<{
+              data: { api_token?: string; account_password?: string } | null;
+            }>;
+          };
+        };
+      };
+    })
+      .from("sms_provider_settings")
+      .select("api_token, account_password")
+      .eq("id", "default")
+      .maybeSingle();
+    if (savedCfg) {
+      effectiveToken = (savedCfg.api_token || savedCfg.account_password || "").trim();
+    }
+  }
+
   const report = await sendBulkSmsNigeriaV2({
     environment: input.environment,
     mode: input.mode,
-    apiToken: input.apiToken ?? null,
+    apiToken: effectiveToken || null,
     from: input.from,
     to: input.to,
     body: input.body,
@@ -442,9 +464,31 @@ export async function checkBulkSmsNigeriaBalanceHandler(
   const { supabase, userId } = context;
   await assertCanIssue(supabase, userId);
 
+  let effectiveToken = input.apiToken?.trim() || "";
+  if (!effectiveToken) {
+    const { data: savedCfg } = await (supabase as unknown as {
+      from: (t: string) => {
+        select: (c: string) => {
+          eq: (k: string, v: string) => {
+            maybeSingle: () => Promise<{
+              data: { api_token?: string; account_password?: string } | null;
+            }>;
+          };
+        };
+      };
+    })
+      .from("sms_provider_settings")
+      .select("api_token, account_password")
+      .eq("id", "default")
+      .maybeSingle();
+    if (savedCfg) {
+      effectiveToken = (savedCfg.api_token || savedCfg.account_password || "").trim();
+    }
+  }
+
   return checkBulkSmsNigeriaBalanceV2({
     environment: input.environment,
-    apiToken: input.apiToken ?? null,
+    apiToken: effectiveToken || null,
   });
 }
 

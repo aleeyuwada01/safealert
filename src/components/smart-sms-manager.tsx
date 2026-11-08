@@ -14,6 +14,10 @@ import {
   Phone,
   History,
   RefreshCw,
+  KeyRound,
+  UserCheck,
+  CheckCircle2,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -32,8 +36,13 @@ import {
   toggleSmsRecipient,
   deleteSmsRecipient,
   dispatchSmartSmsCampaign,
+  saveSmsProviderSettings,
 } from "@/lib/sms-directory.functions";
-import type { SmsCampaignRow, SmsRecipientRow } from "@/lib/sms-directory.server";
+import type {
+  SmsCampaignRow,
+  SmsProviderSettingsRow,
+  SmsRecipientRow,
+} from "@/lib/sms-directory.server";
 import type { BulkSmsEnvironment, BulkSmsGatewayRoute } from "@/lib/bulksms-nigeria";
 
 const GROUP_TAGS = [
@@ -95,7 +104,13 @@ export function SmartSmsManager() {
   const [autoSanitize, setAutoSanitize] = useState(true);
   const [extraNumbers, setExtraNumbers] = useState("");
 
-  // Gateway settings
+  // Gateway settings & persistent Admin BulkSMS Credentials
+  const [providerSettings, setProviderSettings] = useState<SmsProviderSettingsRow | null>(null);
+  const [authMode, setAuthMode] = useState<"api_token" | "login_credentials">("api_token");
+  const [accountEmail, setAccountEmail] = useState("");
+  const [accountPassword, setAccountPassword] = useState("");
+  const [savingSettings, setSavingSettings] = useState(false);
+
   const [environment, setEnvironment] = useState<BulkSmsEnvironment>("sandbox");
   const [mode, setMode] = useState<"sms" | "voice">("sms");
   const [senderId, setSenderId] = useState("SafeAlert");
@@ -113,6 +128,16 @@ export function SmartSmsManager() {
       setRecipients(state.recipients);
       setCampaigns(state.campaigns);
       setActiveAlerts(state.activeAlerts);
+      if (state.providerSettings) {
+        setProviderSettings(state.providerSettings);
+        setAuthMode(state.providerSettings.auth_mode || "api_token");
+        setApiToken(state.providerSettings.api_token || "");
+        setAccountEmail(state.providerSettings.account_email || "");
+        setAccountPassword(state.providerSettings.account_password || "");
+        setSenderId(state.providerSettings.default_sender_id || "SafeAlert");
+        setEnvironment(state.providerSettings.default_environment || "sandbox");
+        setGatewayRoute(state.providerSettings.default_gateway_route || "direct-refund");
+      }
       if (state.recipients.length > 0 && selectedIds.length === 0) {
         setSelectedIds(state.recipients.filter((r) => r.is_active).map((r) => r.id));
       }
@@ -280,6 +305,53 @@ export function SmartSmsManager() {
     }
   }
 
+  async function handleSaveProviderSettings(e: React.FormEvent, verifyBalance = true) {
+    e.preventDefault();
+    setSavingSettings(true);
+    try {
+      const res = await saveSmsProviderSettings({
+        data: {
+          authMode,
+          apiToken: apiToken || null,
+          accountEmail: accountEmail || null,
+          accountPassword: accountPassword || null,
+          defaultSenderId: senderId || "SafeAlert",
+          defaultEnvironment: environment,
+          defaultGatewayRoute: gatewayRoute,
+          verifyBalance,
+        },
+      });
+      setProviderSettings(res.settings);
+      if (res.balanceReport) {
+        if (res.balanceReport.ok) {
+          toast.success(
+            `BulkSMS Nigeria connected! Live balance: ${res.balanceReport.formatted ?? `₦${res.balanceReport.balance ?? 0}`}`,
+          );
+        } else {
+          toast.success(
+            `Credentials saved to Admin DB (Balance check returned ${res.balanceReport.bsngCode})`,
+          );
+        }
+      } else {
+        toast.success("BulkSMS Nigeria credentials & defaults saved to Admin DB");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save BulkSMS settings");
+    } finally {
+      setSavingSettings(false);
+    }
+  }
+
+  const isBulkSmsConfigured = Boolean(
+    (authMode === "api_token" && apiToken.trim().length > 0) ||
+      (authMode === "login_credentials" &&
+        accountEmail.trim().length > 0 &&
+        (accountPassword.trim().length > 0 || apiToken.trim().length > 0)) ||
+      (providerSettings &&
+        (providerSettings.api_token.trim().length > 0 ||
+          providerSettings.account_password.trim().length > 0)),
+  );
+
   return (
     <div className="space-y-6">
       {/* Top Summary Banner */}
@@ -319,6 +391,207 @@ export function SmartSmsManager() {
           </div>
         </div>
       </div>
+
+      {/* Persistent BulkSMS Nigeria Admin Credentials & Account Login Setup */}
+      <form
+        onSubmit={(e) => handleSaveProviderSettings(e, true)}
+        className="rounded-2xl border border-primary/25 bg-card p-5 sm:p-6 shadow-xs space-y-4"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-eyebrow">Admin Gateway Configuration · BulkSMS Nigeria v2</p>
+            <h3 className="font-display text-base font-extrabold sm:text-lg">
+              Connect BulkSMS Nigeria via API Key or Account Login
+            </h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Save your BulkSMS Nigeria credentials once below. All emergency SMS &amp; Voice TTS
+              dispatches automatically authenticate using these saved credentials.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {isBulkSmsConfigured ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-3 py-1 font-mono text-[11px] font-bold text-success">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Credentials Saved in Admin DB
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 font-mono text-[11px] font-bold text-amber-500">
+                Enter API Token or Account Login Below
+              </span>
+            )}
+            {providerSettings?.last_balance_ngn != null && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 font-mono text-[11px] font-bold text-foreground">
+                <Wallet className="h-3.5 w-3.5 text-primary" />
+                Wallet: ₦{Number(providerSettings.last_balance_ngn).toLocaleString()}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Auth Mode Switcher: API Key vs Account Login */}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setAuthMode("api_token")}
+            className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+              authMode === "api_token"
+                ? "border-primary bg-primary/10 text-foreground shadow-2xs"
+                : "border-border bg-surface text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <KeyRound
+              className={`h-4 w-4 shrink-0 ${
+                authMode === "api_token" ? "text-primary" : "text-muted-foreground"
+              }`}
+            />
+            <div>
+              <span className="block text-xs font-bold">
+                Option 1: Connect with BulkSMS API Token (Recommended)
+              </span>
+              <span className="block text-[11px] text-muted-foreground">
+                Paste your API key from bulksmsnigeria.com/app/api-settings
+              </span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAuthMode("login_credentials")}
+            className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+              authMode === "login_credentials"
+                ? "border-primary bg-primary/10 text-foreground shadow-2xs"
+                : "border-border bg-surface text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <UserCheck
+              className={`h-4 w-4 shrink-0 ${
+                authMode === "login_credentials" ? "text-primary" : "text-muted-foreground"
+              }`}
+            />
+            <div>
+              <span className="block text-xs font-bold">
+                Option 2: Connect with BulkSMS Account Login &amp; Secret
+              </span>
+              <span className="block text-[11px] text-muted-foreground">
+                Store your registered BulkSMS Nigeria email &amp; account API password/token
+              </span>
+            </div>
+          </button>
+        </div>
+
+        {authMode === "api_token" ? (
+          <div className="grid gap-3 sm:grid-cols-12">
+            <div className="sm:col-span-6 space-y-1">
+              <Label className="text-xs">
+                BulkSMS Nigeria API Token (Bearer / <code className="font-mono">api_token</code>)
+              </Label>
+              <Input
+                type="password"
+                value={apiToken}
+                onChange={(e) => setApiToken(e.target.value)}
+                placeholder="Paste your BulkSMS Nigeria v2 API Token here…"
+                className="h-9 font-mono text-xs"
+              />
+            </div>
+            <div className="sm:col-span-2 space-y-1">
+              <Label className="text-xs">Default Sender ID</Label>
+              <Input
+                value={senderId}
+                onChange={(e) => setSenderId(e.target.value.slice(0, 11))}
+                maxLength={11}
+                placeholder="SafeAlert"
+                className="h-9 font-mono text-xs"
+              />
+            </div>
+            <div className="sm:col-span-2 space-y-1">
+              <Label className="text-xs">Default Mode</Label>
+              <select
+                value={environment}
+                onChange={(e) => setEnvironment(e.target.value as BulkSmsEnvironment)}
+                className="h-9 w-full rounded-md border border-border bg-surface px-2.5 font-mono text-xs text-foreground"
+              >
+                <option value="sandbox">Sandbox (Free)</option>
+                <option value="production">Production (Live)</option>
+              </select>
+            </div>
+            <div className="sm:col-span-2 space-y-1">
+              <Label className="text-xs">Default Route</Label>
+              <select
+                value={gatewayRoute}
+                onChange={(e) => setGatewayRoute(e.target.value as BulkSmsGatewayRoute)}
+                className="h-9 w-full rounded-md border border-border bg-surface px-2.5 font-mono text-xs text-foreground"
+              >
+                <option value="direct-refund">direct-refund</option>
+                <option value="direct-corporate">direct-corporate</option>
+                <option value="corporate">corporate</option>
+                <option value="otp">otp</option>
+              </select>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-12">
+            <div className="sm:col-span-4 space-y-1">
+              <Label className="text-xs">BulkSMS Nigeria Account Email / Username</Label>
+              <Input
+                type="email"
+                value={accountEmail}
+                onChange={(e) => setAccountEmail(e.target.value)}
+                placeholder="you@organization.ng"
+                className="h-9 font-mono text-xs"
+              />
+            </div>
+            <div className="sm:col-span-4 space-y-1">
+              <Label className="text-xs">Account Password / API Secret Token</Label>
+              <Input
+                type="password"
+                value={accountPassword}
+                onChange={(e) => {
+                  setAccountPassword(e.target.value);
+                  if (!apiToken) setApiToken(e.target.value);
+                }}
+                placeholder="Enter BulkSMS account secret / token…"
+                className="h-9 font-mono text-xs"
+              />
+            </div>
+            <div className="sm:col-span-2 space-y-1">
+              <Label className="text-xs">Default Sender ID</Label>
+              <Input
+                value={senderId}
+                onChange={(e) => setSenderId(e.target.value.slice(0, 11))}
+                maxLength={11}
+                placeholder="SafeAlert"
+                className="h-9 font-mono text-xs"
+              />
+            </div>
+            <div className="sm:col-span-2 space-y-1">
+              <Label className="text-xs">Environment</Label>
+              <select
+                value={environment}
+                onChange={(e) => setEnvironment(e.target.value as BulkSmsEnvironment)}
+                className="h-9 w-full rounded-md border border-border bg-surface px-2.5 font-mono text-xs text-foreground"
+              >
+                <option value="sandbox">Sandbox (Free)</option>
+                <option value="production">Production (Live)</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+          <p className="text-[11px] text-muted-foreground">
+            Supports <code className="font-mono text-foreground">Authorization: Bearer</code>,{" "}
+            <code className="font-mono text-foreground">api_token</code> header, and JSON body auth
+            against <code className="font-mono text-foreground">bulksmsnigeria.com/api/v2</code> &amp;{" "}
+            <code className="font-mono text-foreground">/api/sandbox/v2</code>.
+          </p>
+          <Button type="submit" size="sm" disabled={savingSettings} className="rounded-xl">
+            <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
+            {savingSettings
+              ? "Saving & Verifying…"
+              : "Save BulkSMS Credentials & Verify Wallet"}
+          </Button>
+        </div>
+      </form>
 
       {/* Main 2-Column Layout: Left = Saved Directory + Add Numbers | Right = Smart Alert Composer + Telco Sanitizer */}
       <div className="grid gap-6 lg:grid-cols-12">

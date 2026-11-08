@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useAuth } from "@/hooks/useAuth";
 
 const NAV_LINKS = [
   { to: "/" as const, label: "Platform" },
@@ -14,6 +15,8 @@ const NAV_LINKS = [
 
 export function SiteHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { session, signOut } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95 backdrop-blur-md">
@@ -74,6 +77,21 @@ export function SiteHeader() {
               Command Console <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
             </Link>
           </Button>
+          {session && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                await signOut();
+                navigate({ to: "/auth" });
+              }}
+              className="hidden rounded-lg border-destructive/30 font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive sm:inline-flex"
+              title="Log out"
+            >
+              <LogOut className="mr-1.5 h-3.5 w-3.5" />
+              Log Out
+            </Button>
+          )}
           <Button
             variant="outline"
             size="icon"

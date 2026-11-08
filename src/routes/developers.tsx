@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Activity,
   LogIn,
+  LogOut,
   RefreshCw,
   Globe,
   Lock,
@@ -479,6 +480,21 @@ echo json_encode(['received' => true]);`,
                     Switch to Demo Dev (dev@acme.ng)
                   </Button>
                 )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    setUserId(null);
+                    setUserEmail(null);
+                    toast.success("Signed out of Developer Portal");
+                    await refreshWorkspace();
+                  }}
+                  className="h-9 rounded-xl border-destructive/30 text-xs font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <LogOut className="mr-1.5 h-3.5 w-3.5" />
+                  Log Out
+                </Button>
               </div>
             ) : (
               <div className="flex flex-wrap items-center gap-2">

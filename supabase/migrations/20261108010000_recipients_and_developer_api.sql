@@ -340,3 +340,33 @@ BEGIN
   SET identity_data = jsonb_set(identity_data, '{email}', '"operator@safealert.live"')
   WHERE identity_data->>'email' = 'operator@safealert.gov';
 END $$;
+
+-- 12. PERSISTENT BULKSMS NIGERIA ADMIN CONFIGURATION TABLE -------------------
+CREATE TABLE IF NOT EXISTS public.sms_provider_settings (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  provider_name TEXT NOT NULL DEFAULT 'BulkSMS Nigeria v2',
+  auth_mode TEXT NOT NULL DEFAULT 'api_token',
+  api_token TEXT,
+  account_email TEXT,
+  account_password TEXT,
+  default_sender_id TEXT NOT NULL DEFAULT 'SafeAlert',
+  default_environment TEXT NOT NULL DEFAULT 'sandbox',
+  default_gateway_route TEXT NOT NULL DEFAULT 'direct-refund',
+  webhook_secret TEXT DEFAULT 'whsec_bulksms_safealert_2026',
+  last_balance_ngn NUMERIC(14,2),
+  last_verified_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.sms_provider_settings TO anon, authenticated, service_role;
+ALTER TABLE public.sms_provider_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "sms_provider_settings_all" ON public.sms_provider_settings;
+CREATE POLICY "sms_provider_settings_all" ON public.sms_provider_settings
+  FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO public.sms_provider_settings (
+  id, provider_name, auth_mode, default_sender_id, default_environment, default_gateway_route
+) VALUES (
+  'default', 'BulkSMS Nigeria v2', 'api_token', 'SafeAlert', 'sandbox', 'direct-refund'
+) ON CONFLICT (id) DO NOTHING;
