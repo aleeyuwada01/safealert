@@ -67,37 +67,37 @@ const bulkSmsWebhookSchema = z.object({
 
 export const issueAlert = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => issueSchema.parse(data))
+  .validator((data: unknown) => issueSchema.parse(data))
   .handler(async ({ data, context }) => issueAlertHandler(data, context));
 
 export const approveAlert = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ alertId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ alertId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => approveAlertHandler(data.alertId, context));
 
 export const cancelAlert = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ alertId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ alertId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => cancelAlertHandler(data.alertId, context));
 
 export const testGateway = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => testGatewaySchema.parse(data))
+  .validator((data: unknown) => testGatewaySchema.parse(data))
   .handler(async ({ data, context }) => testGatewayHandler(data, context));
 
 export const testBulkSmsNigeria = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => bulkSmsTestSchema.parse(data))
+  .validator((data: unknown) => bulkSmsTestSchema.parse(data))
   .handler(async ({ data, context }) => testBulkSmsNigeriaHandler(data, context));
 
 export const checkBulkSmsNigeriaBalance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => bulkSmsBalanceSchema.parse(data))
+  .validator((data: unknown) => bulkSmsBalanceSchema.parse(data))
   .handler(async ({ data, context }) => checkBulkSmsNigeriaBalanceHandler(data, context));
 
 export const simulateBulkSmsDeliveryWebhook = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => bulkSmsWebhookSchema.parse(data))
+  .validator((data: unknown) => bulkSmsWebhookSchema.parse(data))
   .handler(async ({ data, context }) => processBulkSmsWebhookHandler(data, context));
 
 export const getChannelStatus = createServerFn({ method: "GET" }).handler(async () =>

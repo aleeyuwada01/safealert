@@ -16,7 +16,7 @@ export const getDeveloperWorkspace = createServerFn({ method: "GET" }).handler(a
 });
 
 export const createDeveloperApiKey = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({
       userId: z.string().uuid().optional().nullable(),
       name: z.string().min(2).max(120),
@@ -31,7 +31,7 @@ export const createDeveloperApiKey = createServerFn({ method: "POST" })
   });
 
 export const toggleDeveloperApiKey = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({
       id: z.string().uuid(),
       is_active: z.boolean(),
@@ -42,13 +42,13 @@ export const toggleDeveloperApiKey = createServerFn({ method: "POST" })
   });
 
 export const deleteDeveloperApiKey = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ id: z.string().uuid() }))
+  .validator(z.object({ id: z.string().uuid() }))
   .handler(async ({ data }) => {
     return deleteDeveloperApiKeyHandler(data);
   });
 
 export const createDeveloperWebhook = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({
       userId: z.string().uuid().optional().nullable(),
       name: z.string().min(2).max(120),
@@ -62,19 +62,19 @@ export const createDeveloperWebhook = createServerFn({ method: "POST" })
   });
 
 export const deleteDeveloperWebhook = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ id: z.string().uuid() }))
+  .validator(z.object({ id: z.string().uuid() }))
   .handler(async ({ data }) => {
     return deleteDeveloperWebhookHandler(data);
   });
 
 export const triggerDeveloperWebhookTest = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ webhookId: z.string().uuid() }))
+  .validator(z.object({ webhookId: z.string().uuid() }))
   .handler(async ({ data }) => {
     return triggerDeveloperWebhookTestHandler(data);
   });
 
 export const runDeveloperApiPlayground = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({
       apiKey: z.string().min(1).max(300),
       endpoint: z.enum([

@@ -14,7 +14,7 @@ export const getSmsDirectoryState = createServerFn({ method: "GET" }).handler(as
 });
 
 export const saveSmsProviderSettings = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({
       authMode: z.enum(["api_token", "login_credentials"]),
       apiToken: z.string().max(400).optional().nullable(),
@@ -37,7 +37,7 @@ export const saveSmsProviderSettings = createServerFn({ method: "POST" })
   });
 
 export const upsertSmsRecipients = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({
       rawNumbers: z.string().min(5).max(10000),
       fullName: z.string().max(120).optional().nullable(),
@@ -51,7 +51,7 @@ export const upsertSmsRecipients = createServerFn({ method: "POST" })
   });
 
 export const toggleSmsRecipient = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({
       id: z.string().uuid(),
       is_active: z.boolean(),
@@ -62,13 +62,13 @@ export const toggleSmsRecipient = createServerFn({ method: "POST" })
   });
 
 export const deleteSmsRecipient = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ id: z.string().uuid() }))
+  .validator(z.object({ id: z.string().uuid() }))
   .handler(async ({ data }) => {
     return deleteSmsRecipientHandler(data);
   });
 
 export const dispatchSmartSmsCampaign = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({
       title: z.string().min(2).max(140),
       recipientIds: z.array(z.string().uuid()),

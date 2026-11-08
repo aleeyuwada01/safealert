@@ -31,16 +31,18 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 }
 
 function createSupabaseClient() {
+  const procEnv =
+    typeof process !== "undefined" && process.env ? process.env : ({} as Record<string, string | undefined>);
   const SUPABASE_URL =
     import.meta.env["VITE_SUPABASE_URL"] ||
-    process.env["VITE_SUPABASE_URL"] ||
-    process.env["SUPABASE_URL"] ||
+    procEnv["VITE_SUPABASE_URL"] ||
+    procEnv["SUPABASE_URL"] ||
     DEFAULT_SUPABASE_URL;
 
   const SUPABASE_PUBLISHABLE_KEY =
     import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
-    process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
-    process.env["SUPABASE_PUBLISHABLE_KEY"] ||
+    procEnv["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
+    procEnv["SUPABASE_PUBLISHABLE_KEY"] ||
     DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
